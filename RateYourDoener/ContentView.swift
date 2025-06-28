@@ -9,27 +9,27 @@ import MapKit
 import SwiftUI
 
 struct ContentView: View {
-    @State private var searchVM = DoenerSearchVM()
+    @StateObject private var viewModel: ViewModel
     
-    @State private var selectedStore: MKMapItem?
-    @State private var showingSheet = false
-    
-    @State private var region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 50.7751759380311, longitude: 6.083487398704785), span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1))
+    init() {
+        _viewModel = StateObject(wrappedValue: ViewModel(repository: DoenerStoreRepository()))
+    }
     
     var body: some View {
         NavigationStack {
-            Map(initialPosition: .region(region)) {
+            Map(initialPosition: .region(viewModel.repository.region)) {
                 
-                ForEach(searchVM.stores, id: \.self) { store in
-                    Annotation(store.placemark.name!, coordinate: store.placemark.coordinate) {
+                ForEach(viewModel.stores, id: \.self) { store in
+                    Annotation(store.mapItem.name!, coordinate: CLLocationCoordinate2D(latitude: store.mapItem.latitude, longitude: store.mapItem.longitude)) {
                         Button {
-                            selectedStore = store
+                            viewModel.selectedStore = store
+                            viewModel.showingSheet.toggle()
                         } label: {
                             VStack {
                                 ZStack {
                                     Circle()
                                         .frame(width: 44, height: 44)
-                                        .foregroundColor(.red)
+                                        .foregroundColor(store.isLogged ? .green : .blue)
                                     Text("🥙")
                                 }
                             }
@@ -39,7 +39,18 @@ struct ContentView: View {
                 }
             }
             .onAppear {
-                searchVM.fetch(in: region)
+                if viewModel.stores.isEmpty {
+                    viewModel.fetchStores()
+                }
+            }
+            .sheet(isPresented: $viewModel.showingSheet) {
+                if let store = viewModel.selectedStore {
+                    let sheetVM = DoenerStoreSheetView.ViewModel(
+                        store: store,
+                        repository: viewModel.repository
+                    )
+                    DoenerStoreSheetView(viewModel: sheetVM)
+                }
             }
             .navigationTitle("Rate Your Döner")
             .navigationBarTitleDisplayMode(.inline)

@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct RateYourDoenerApp: App {
+    @StateObject var repository = DoenerStoreRepository()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(repository)
         }
     }
 }
